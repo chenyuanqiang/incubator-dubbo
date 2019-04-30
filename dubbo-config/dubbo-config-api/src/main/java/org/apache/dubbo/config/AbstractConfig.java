@@ -191,6 +191,7 @@ public abstract class AbstractConfig implements Serializable {
                         continue;
                     }
                     int i = name.startsWith("get") ? 3 : 2;
+                    //拿到对应属性的名字
                     String prop = StringUtils.camelToSplitName(name.substring(i, i + 1).toLowerCase() + name.substring(i + 1), ".");
                     String key;
                     if (parameter != null && parameter.key().length() > 0) {
@@ -198,6 +199,7 @@ public abstract class AbstractConfig implements Serializable {
                     } else {
                         key = prop;
                     }
+                    //执行类反射
                     Object value = method.invoke(config);
                     String str = String.valueOf(value).trim();
                     if (value != null && str.length() > 0) {

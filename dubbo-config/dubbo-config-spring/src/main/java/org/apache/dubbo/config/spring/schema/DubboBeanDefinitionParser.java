@@ -76,7 +76,9 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
         RootBeanDefinition beanDefinition = new RootBeanDefinition();
         beanDefinition.setBeanClass(beanClass);
         beanDefinition.setLazyInit(false);
+//        ===============开始解析ID================
         String id = element.getAttribute("id");
+//        ===============ID的生成规则=========name>特殊规则>类的名字=================
         if ((id == null || id.length() == 0) && required) {
             String generatedBeanName = element.getAttribute("name");
             if (generatedBeanName == null || generatedBeanName.length() == 0) {
@@ -99,9 +101,12 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
             if (parserContext.getRegistry().containsBeanDefinition(id)) {
                 throw new IllegalStateException("Duplicate spring bean id " + id);
             }
+//            ===========ID对应的bean放到容器中==================
             parserContext.getRegistry().registerBeanDefinition(id, beanDefinition);
+//            ===========设置对应bean的ID为生成的ID=================
             beanDefinition.getPropertyValues().addPropertyValue("id", id);
         }
+//        =================解析ID结束================
         if (ProtocolConfig.class.equals(beanClass)) {
             for (String name : parserContext.getRegistry().getBeanDefinitionNames()) {
                 BeanDefinition definition = parserContext.getRegistry().getBeanDefinition(name);
@@ -114,8 +119,11 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                 }
             }
         } else if (ServiceBean.class.equals(beanClass)) {
+            // 处理 `class` 属性。例如
+            // <dubbo:service id="sa" interface="com.alibaba.dubbo.demo.DemoService" class="com.alibaba.dubbo.demo.provider.DemoServiceImpl" >
             String className = element.getAttribute("class");
             if (className != null && className.length() > 0) {
+                // 创建 Service 的 RootBeanDefinition 对象。相当于内嵌了 <bean class="com.alibaba.dubbo.demo.provider.DemoServiceImpl" />
                 RootBeanDefinition classDefinition = new RootBeanDefinition();
                 classDefinition.setBeanClass(ReflectUtils.forName(className));
                 classDefinition.setLazyInit(false);
@@ -151,11 +159,14 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                         || !type.equals(getter.getReturnType())) {
                     continue;
                 }
+                // 解析 `<dubbo:parameters />`
                 if ("parameters".equals(property)) {
                     parameters = parseParameters(element.getChildNodes(), beanDefinition);
                 } else if ("methods".equals(property)) {
+                    // 解析 `<dubbo:method />`
                     parseMethods(id, element.getChildNodes(), beanDefinition, parserContext);
                 } else if ("arguments".equals(property)) {
+                    // 解析 `<dubbo:argument />`
                     parseArguments(id, element.getChildNodes(), beanDefinition, parserContext);
                 } else {
                     String value = element.getAttribute(property);
@@ -163,17 +174,22 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                         value = value.trim();
                         if (value.length() > 0) {
                             if ("registry".equals(property) && RegistryConfig.NO_AVAILABLE.equalsIgnoreCase(value)) {
+                                // 不想注册到注册中心的情况，即 `registry=N/A`
                                 RegistryConfig registryConfig = new RegistryConfig();
                                 registryConfig.setAddress(RegistryConfig.NO_AVAILABLE);
                                 beanDefinition.getPropertyValues().addPropertyValue(property, registryConfig);
                             } else if ("registry".equals(property) && value.indexOf(',') != -1) {
+                                // 多注册中心的情况
                                 parseMultiRef("registries", value, beanDefinition, parserContext);
                             } else if ("provider".equals(property) && value.indexOf(',') != -1) {
+                                // 多服务提供者的情况
                                 parseMultiRef("providers", value, beanDefinition, parserContext);
                             } else if ("protocol".equals(property) && value.indexOf(',') != -1) {
+                                // 多协议的情况
                                 parseMultiRef("protocols", value, beanDefinition, parserContext);
                             } else {
                                 Object reference;
+//                                基本类型
                                 if (isPrimitive(type)) {
                                     if ("async".equals(property) && "false".equals(value)
                                             || "timeout".equals(property) && "0".equals(value)
@@ -186,7 +202,9 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                                     }
                                     reference = value;
                                 } else if ("protocol".equals(property)
+                                        //存在该注册协议的实现
                                         && ExtensionLoader.getExtensionLoader(Protocol.class).hasExtension(value)
+                                        //容器中已经存在，但是类型不是ProtocolConfig
                                         && (!parserContext.getRegistry().containsBeanDefinition(value)
                                         || !ProtocolConfig.class.getName().equals(parserContext.getRegistry().getBeanDefinition(value).getBeanClassName()))) {
                                     if ("dubbo:provider".equals(element.getTagName())) {
@@ -300,6 +318,11 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
     }
 
     private static void parseProperties(NodeList nodeList, RootBeanDefinition beanDefinition) {
+//        <bean id="demoDAO" class="com.alibaba.dubbo.demo.provider.DemoDAO" />
+//            <dubbo:service id="sa" interface="com.alibaba.dubbo.demo.DemoService"
+//                                   class="com.alibaba.dubbo.demo.provider.DemoServiceImpl">
+//               <property name="demoDAO" ref="demoDAO" />
+//            </dubbo:service>
         if (nodeList != null && nodeList.getLength() > 0) {
             for (int i = 0; i < nodeList.getLength(); i++) {
                 Node node = nodeList.item(i);
