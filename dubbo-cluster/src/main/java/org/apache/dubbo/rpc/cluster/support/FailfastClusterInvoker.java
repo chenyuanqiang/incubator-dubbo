@@ -42,14 +42,19 @@ public class FailfastClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
     @Override
     public Result doInvoke(Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
+        //检查调用的集合是否可用，如果不可用会抛出异常
         checkInvokers(invokers, invocation);
+        //会重所有提供的服务的invokers里面选一个提供服务的invoker
+        //select方法会使用loadbalance属性里面提供的负载均衡的策略
         Invoker<T> invoker = select(loadbalance, invocation, invokers, null);
         try {
+            //找到了可以执行的invoker，发起rpc调用
             return invoker.invoke(invocation);
         } catch (Throwable e) {
             if (e instanceof RpcException && ((RpcException) e).isBiz()) { // biz exception.
                 throw (RpcException) e;
             }
+            //dubbo中的异常都会封装为RpcException进行抛出
             throw new RpcException(e instanceof RpcException ? ((RpcException) e).getCode() : 0,
                     "Failfast invoke providers " + invoker.getUrl() + " " + loadbalance.getClass().getSimpleName()
                             + " select from all providers " + invokers + " for service " + getInterface().getName()
