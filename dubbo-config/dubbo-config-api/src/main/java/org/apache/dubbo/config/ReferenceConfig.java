@@ -391,9 +391,10 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 }
             }
 
-            if (urls.size() == 1) {
-                invoker = refprotocol.refer(interfaceClass, urls.get(0));
-            } else {
+//            if (urls.size() == 1) {
+//                invoker = refprotocol.refer(interfaceClass, urls.get(0));
+//            } else
+              {
                 List<Invoker<?>> invokers = new ArrayList<Invoker<?>>();
                 URL registryURL = null;
                 for (URL url : urls) {

@@ -203,7 +203,7 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
             for (Invoker<T> invoker : invokers) {
                 //拿可用的服务
                 if (invoker.isAvailable()) {
-                    //排除已经选择过的，优先使用没有选择过的
+                    //排除疑是不可用的，不是不可用
                     if (selected == null || !selected.contains(invoker)) {
                         reselectInvokers.add(invoker);
                     }
@@ -215,7 +215,7 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
             }
         } else { // do not check invoker.isAvailable()
             for (Invoker<T> invoker : invokers) {
-                //所有的都查，不管可用不可用，也是要没有选择过的
+                //所有的都查，不管可用不可用，也是要稳定的，疑是不可用的不要
                 if (selected == null || !selected.contains(invoker)) {
                     reselectInvokers.add(invoker);
                 }
